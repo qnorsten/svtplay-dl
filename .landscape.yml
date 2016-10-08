@@ -1,0 +1,4 @@
+python-targets:
+  - 3
+doc-warnings: false
+max-line-length: 160
