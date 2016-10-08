@@ -10,7 +10,7 @@ import hashlib
 
 from svtplay_dl.log import log
 from svtplay_dl.service import Service, OpenGraphThumbMixin
-from svtplay_dl.utils import filenamify, ensure_unicode, is_py2, decode_html_entities
+from svtplay_dl.utils import filenamify, ensure_unicode, decode_html_entities
 from svtplay_dl.utils.urllib import urlparse, urljoin, parse_qs
 from svtplay_dl.fetcher.hds import hdsparse
 from svtplay_dl.fetcher.hls import hlsparse
@@ -283,10 +283,7 @@ class Svtplay(Service, OpenGraphThumbMixin):
                     name = name[:name.find(".")]
                 name = filenamify(name.replace(" - ", "."))
                 other = filenamify(data["episodeTitle"])
-            if is_py2:
-                id = hashlib.sha256(data["programVersionId"]).hexdigest()[:7]
-            else:
-                id = hashlib.sha256(data["programVersionId"].encode("utf-8")).hexdigest()[:7]
+            id = hashlib.sha256(data["programVersionId"].encode("utf-8")).hexdigest()[:7]
 
         if name == other:
             other = None

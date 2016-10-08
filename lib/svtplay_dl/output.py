@@ -6,10 +6,9 @@ import time
 import re
 import os
 import io
-import platform
 from datetime import timedelta
 
-from svtplay_dl.utils import is_py2, filenamify, decode_html_entities, ensure_unicode
+from svtplay_dl.utils import filenamify, decode_html_entities, ensure_unicode
 from svtplay_dl.utils.terminal import get_terminal_size
 from svtplay_dl.log import log
 
@@ -118,12 +117,6 @@ def progressbar(total, pos, msg=""):
 
 
 def filename(stream):
-    if stream.options.output:
-        if is_py2:
-            if platform.system() == "Windows":
-                stream.options.output = stream.options.output.decode("latin1")
-            else:
-                stream.options.output = stream.options.output.decode("utf-8")
     if not stream.options.output or os.path.isdir(stream.options.output):
         data = ensure_unicode(stream.get_urldata())
         if data is None:
@@ -143,10 +136,7 @@ def filename(stream):
 
 def output(options, extention="mp4", openfd=True, mode="wb", **kwargs):
     subtitlefiles = ["srt", "smi", "tt","sami", "wrst"]
-    if is_py2:
-        file_d = file
-    else:
-        file_d = io.IOBase
+    file_d = io.IOBase
 
     if options.output != "-":
         ext = re.search(r"(\.\w{2,4})$", options.output)
@@ -171,10 +161,7 @@ def output(options, extention="mp4", openfd=True, mode="wb", **kwargs):
             file_d = open(options.output, mode, **kwargs)
     else:
         if openfd:
-            if is_py2:
-                file_d = sys.stdout
-            else:
-                file_d = sys.stdout.buffer
+            file_d = sys.stdout.buffer
 
     return file_d
 
