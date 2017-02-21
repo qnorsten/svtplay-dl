@@ -16,7 +16,9 @@ from svtplay_dl.fetcher.hds import hdsparse
 from svtplay_dl.fetcher.hls import hlsparse
 from svtplay_dl.fetcher.dash import dashparse
 from svtplay_dl.subtitle import subtitle
+from svtplay_dl.info import info
 from svtplay_dl.error import ServiceError
+from math import ceil
 
 
 class Svtplay(Service, OpenGraphThumbMixin):
@@ -39,7 +41,7 @@ class Svtplay(Service, OpenGraphThumbMixin):
             yield ServiceError("Cant find video info.")
             return
         janson = json.loads(match.group(1))["videoTitlePage"]
-
+        
         if "programTitle" not in janson["video"]:
             yield ServiceError("Can't find any video on that page")
             return
@@ -54,7 +56,7 @@ class Svtplay(Service, OpenGraphThumbMixin):
                         yield ServiceError("Cant find video info.")
                         return
                     janson = json.loads(match.group(1))["videoTitlePage"]
-
+                    
         if "live" in janson["video"]:
             self.options.live = janson["video"]["live"]
 
@@ -65,7 +67,14 @@ class Svtplay(Service, OpenGraphThumbMixin):
         if self.exclude():
             yield ServiceError("Excluding video")
             return
-
+            
+        if self.options.get_info:
+            titleInfo = self._save_info(janson)
+            if titleInfo:
+                yield info(copy.copy(self.options), titleInfo)
+                log.info("Logging info")
+            else: 
+                log.info("Couldn't get info for this episode")
         if "programVersionId" in janson["video"]:
             vid = janson["video"]["programVersionId"]
         else:
@@ -126,7 +135,46 @@ class Svtplay(Service, OpenGraphThumbMixin):
                             if streams:
                                 for n in list(streams.keys()):
                                     yield streams[n]
+    def _save_info(self, janson):
+        data = None
 
+        program = janson["video"]["programTitle"]
+        title = janson["video"]["title"]
+
+        if program != title and program:
+            data = "Show: %s\n" % (program)
+            
+        data = "Title: %s" % title
+        if "broadcastDate" in janson["video"]:
+            data+= "\nBroadcast Date: %s" % janson["video"]["broadcastDate"]
+        if "publishDate" in janson["video"]:
+            data+= "\nPublishDate Date: %s" % janson["video"]["publishDate"]
+        data+= "\nDuration: %s min" % str(ceil(janson["video"]["materialLength"]/60))
+        if "episodic" in janson["video"]:
+            data += "\nSeason: %s \nEpisode: %s" % (janson["video"]["season"],janson["video"]["episodeNumber"])
+        if "titleType" in janson["video"]:
+            if janson["video"]["titleType"] == "MOVIE":
+                type = "Movie"
+            elif janson["video"]["titleType"] == "SERIES_OR_TV_SHOW":
+                type = "TV-Show"
+            elif janson["video"]["titleType"] == "CLIP":
+                type = "Clip"
+            else:
+                type = janson["video"]["titleType"]
+            data+="\nType: %s" % type
+            
+       
+            if "accessService" in janson:
+                if janson["accessService"] == "audioDescription":
+                       data+="Audiodescription: True"
+                if janson["accessService"] == "signInterpretation":
+                    data += "\nSignInterpretation: True" 
+        if "closedCaptioned" in janson["video"]:
+            data+="\nClosed Captioned: True"
+        if "description" in janson["video"]:
+            data += "\nDescription: " + janson["video"]["description"]
+        return data
+            
     def _last_chance(self, videos, page, maxpage=2):
         if page > maxpage:
             return videos
