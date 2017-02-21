@@ -14,6 +14,7 @@ from svtplay_dl.utils import select_quality, list_quality, is_py2, ensure_unicod
 from svtplay_dl.service import service_handler, Generic
 from svtplay_dl.fetcher import VideoRetriever
 from svtplay_dl.subtitle import subtitle
+from svtplay_dl.info import info
 from svtplay_dl.output import filename
 from svtplay_dl.postprocess import postprocess
 
@@ -130,6 +131,7 @@ class Options(object):
         self.list_quality = False
         self.other = None
         self.subtitle = False
+        self.info = False
         self.username = None
         self.password = None
         self.thumbnail = False
@@ -234,6 +236,7 @@ def get_one_media(stream, options):
 
     videos = []
     subs = []
+    infos = []
     subfixes = []
     error = []
     streams = stream.get()
@@ -247,6 +250,8 @@ def get_one_media(stream, options):
                     videos.append(i)
             if isinstance(i, subtitle):
                 subs.append(i)
+            if isinstance(i, info):
+                infos.append(i)
             if isinstance(i, Exception):
                 error.append(i)
     except Exception as e:
@@ -293,7 +298,10 @@ def get_one_media(stream, options):
         options_subs_dl(subfixes)
         if options.force_subtitle:
             return
-
+    if options.get_info and options.output != "-" and not options.get_url:
+        for inf in infos:
+            inf.save()
+            
     if options.merge_subtitle and not options.subtitle:
         options_subs_dl(subfixes)
 
@@ -431,6 +439,9 @@ def main():
                       help="Remux from one container to mp4 using ffmpeg or avconv")
     parser.add_option("--include-clips", dest="include_clips", default=False, action="store_true",
                       help="include clips from websites when using -A")
+    parser.add_option("--get-info",
+                      action="store_true", dest="get_info", default=False,
+                      help="Download and saves information about the video if available")
                       
     (options, args) = parser.parse_args()
     if not args:
@@ -498,4 +509,5 @@ def mergeParserOption(options, parser):
     options.get_raw_subtitles = parser.get_raw_subtitles
     options.convert_subtitle_colors = parser.convert_subtitle_colors
     options.include_clips = parser.include_clips
+    options.get_info = parser.get_info
     return options
