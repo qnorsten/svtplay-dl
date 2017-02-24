@@ -23,7 +23,48 @@ from math import ceil
 
 class Svtplay(Service, OpenGraphThumbMixin):
     supported_domains = ['svtplay.se', 'svt.se', 'beta.svtplay.se', 'svtflow.se']
-
+    # List of json keys used in application 
+    # Should only need to update this function on json
+    # Format is key_used_in_script: key_from_svtplay
+    #TODO add video here? 
+    json_keys = {
+        "accessService":"accessService",
+        "videoTitlePage":"videoTitlePage",
+        "programTitle":"programTitle",
+        "title":"title",
+        "versions":"versions",
+        "live":"live",
+        "subtitleReferences":"subtitleReferences",
+        "format":"format",
+        "videoReferences":"videoReferences",
+        "url":"url",
+        "alt":"alt",
+        "audioDescription":"audioDescription",
+        "audioDescription":"audioDescription",
+        "signInterpretation":"signInterpretation",
+        "broadcastDate":"broadcastDate",
+        "publishDate":"publishDate",
+        "duration":"duration",
+        "episodic":"episodic",
+        "season":"season",
+        "episodeNumber":"episodeNumber",
+        "titleType":"titleType",
+        "closedCaptioned":"closedCaptioned",
+        "programVersionId":"programVersionId",
+        "id":"id",
+        "gridPage":"gridPage",
+        "pagination":"pagination",
+        "totalPages":"totalPages",
+        "content":"content",
+        "contentUrl":"contentUrl",
+        "clusterPage":"clusterPage",
+        "tabs":"tabs",
+        "slug":"slug",
+        "clips":"clips",
+        "relatedVideosTabs":"relatedVideosTabs",
+        "description":"description",
+    }
+     
     def get(self):
         parse = urlparse(self.url)
         if parse.netloc == "www.svtplay.se" or parse.netloc == "svtplay.se":
@@ -33,146 +74,168 @@ class Svtplay(Service, OpenGraphThumbMixin):
 
         query = parse_qs(parse.query)
         self.access = None
-        if "accessService" in query:
-            self.access = query["accessService"]
+        if self.json_keys["accessService"] in query:
+            self.access = query[self.json_keys["accessService"]]
 
         match = re.search("__svtplay'] = ({.*});", self.get_urldata())
         if not match:
             yield ServiceError("Cant find video info.")
             return
-        janson = json.loads(match.group(1))["videoTitlePage"]
+        janson = json.loads(match.group(1))[self.json_keys["videoTitlePage"]]
         
-        if "programTitle" not in janson["video"]:
+        if self.json_keys["programTitle"] not in janson["video"]:
             yield ServiceError("Can't find any video on that page")
             return
 
         if self.access:
-            for i in janson["video"]["versions"]:
-                if i["accessService"] == self.access:
+            for i in janson["video"][self.json_keys["versions"]]:
+                if self.json_keys["accessService"] == self.access:
                     url = urljoin("http://www.svtplay.se", i["contentUrl"])
                     res = self.http.get(url)
                     match = re.search("__svtplay'] = ({.*});", res.text)
                     if not match:
                         yield ServiceError("Cant find video info.")
                         return
-                    janson = json.loads(match.group(1))["videoTitlePage"]
+                    janson = json.loads(match.group(1))[self.json_keys["videoTitlePage"]]
                     
-        if "live" in janson["video"]:
-            self.options.live = janson["video"]["live"]
-
+        if self.json_keys["live"] in janson["video"]:
+            self.options.live = janson["video"][self.json_keys["live"]]
+        
+        parsed_info = self._parse_info(janson,True)
+        if not parsed_info:
+            yield ServiceError("Error parsing info, json keys might have changed?")
+            
         if self.options.output_auto:
             self.options.service = "svtplay"
-            self.options.output = self.outputfilename(janson["video"], self.options.output)
+            self.options.output = self.outputfilename(parsed_info, self.options.output)
 
         if self.exclude():
             yield ServiceError("Excluding video")
             return
-            
+        
         if self.options.get_info:
-            titleInfo = self._save_info(janson)
-            if titleInfo:
-                yield info(copy.copy(self.options), titleInfo)
-                log.info("Logging info")
+            
+            if parsed_info:
+                yield info(copy.copy(self.options), parsed_info)
+                log.info("Collected info")
             else: 
-                log.info("Couldn't get info for this episode")
-        if "programVersionId" in janson["video"]:
-            vid = janson["video"]["programVersionId"]
-        else:
-            vid = janson["video"]["id"]
-        res = self.http.get("http://api.svt.se/videoplayer-api/video/{0}".format(vid))
+                log.info("Couldn't collect info for this episode")
+                
+        if not "vid" in parsed_info :
+             yield ServiceError("Could not collect video ID")
+           
+        res = self.http.get("http://api.svt.se/videoplayer-api/video/{0}".format(parsed_info["vid"]))
+        
         janson = res.json()
-        if "live" in janson:
-            self.options.live = janson["live"]
-        if "subtitleReferences" in janson:
-            for i in janson["subtitleReferences"]:
-                if i["format"] == "websrt" and "url" in i:
-                    yield subtitle(copy.copy(self.options), "wrst", i["url"])
+        if self.json_keys["live"] in janson:
+            self.options.live = janson[self.json_keys["live"]]
+        if self.json_keys["subtitleReferences"] in janson:
+            for i in janson[self.json_keys["subtitleReferences"]]:
+                if i[self.json_keys[self.json_keys["format"]]] == "websrt" and "url" in i:
+                    yield subtitle(copy.copy(self.options), "wrst", i[self.json_keys["url"]])
 
-        if "videoReferences" in janson:
-            if len(janson["videoReferences"]) == 0:
+        if self.json_keys["videoReferences"] in janson:
+            if len(janson[self.json_keys["videoReferences"]]) == 0:
                 yield ServiceError("Media doesn't have any associated videos (yet?)")
                 return
 
-            for i in janson["videoReferences"]:
-                parse = urlparse(i["url"])
+            for i in janson[self.json_keys["videoReferences"]]:
+                parse = urlparse(i[self.json_keys[self.json_keys["url"]]])
                 query = parse_qs(parse.query)
-                if i["format"] == "hls":
-                    streams = hlsparse(self.options, self.http.request("get", i["url"]), i["url"])
+                if i[self.json_keys[self.json_keys["format"]]] == "hls":
+                    streams = hlsparse(self.options, self.http.request("get", i[self.json_keys["url"]]), i[self.json_keys["url"]])
                     if streams:
                         for n in list(streams.keys()):
                             yield streams[n]
-                    if "alt" in query and len(query["alt"]) > 0:
-                        alt = self.http.get(query["alt"][0])
+                    if self.json_keys[self.json_keys["alt"]] in query and len(query[self.json_keys[self.json_keys["alt"]]]) > 0:
+                        alt = self.http.get(query[self.json_keys[self.json_keys["alt"]]][0])
                         if alt:
                             streams = hlsparse(self.options, self.http.request("get", alt.request.url), alt.request.url)
                             if streams:
                                 for n in list(streams.keys()):
                                     yield streams[n]
-                if i["format"] == "hds":
-                    match = re.search(r"\/se\/secure\/", i["url"])
+                if i[self.json_keys["format"]] == "hds":
+                    match = re.search(r"\/se\/secure\/", i[self.json_keys["url"]])
                     if not match:
-                        streams = hdsparse(self.options, self.http.request("get", i["url"], params={"hdcore": "3.7.0"}), i["url"])
+                        streams = hdsparse(self.options, self.http.request("get", i[self.json_keys["url"]], params={"hdcore": "3.7.0"}), i[self.json_keys["url"]])
                         if streams:
                             for n in list(streams.keys()):
                                 yield streams[n]
-                        if "alt" in query and len(query["alt"]) > 0:
-                            alt = self.http.get(query["alt"][0])
+                        if "alt" in query and len(query[self.json_keys["alt"]]) > 0:
+                            alt = self.http.get(query[self.json_keys["alt"]][0])
                             if alt:
                                 streams = hdsparse(self.options, self.http.request("get", alt.request.url, params={"hdcore": "3.7.0"}), alt.request.url)
                                 if streams:
                                     for n in list(streams.keys()):
                                         yield streams[n]
-                if i["format"] == "dash264" or i["format"] == "dashhbbtv":
-                    streams = dashparse(self.options, self.http.request("get", i["url"]), i["url"])
+                if i[self.json_keys["format"]] == "dash264" or i[self.json_keys["format"]] == "dashhbbtv":
+                    streams = dashparse(self.options, self.http.request("get", i[self.json_keys["url"]]), i[self.json_keys["url"]])
                     if streams:
                         for n in list(streams.keys()):
                             yield streams[n]
 
-                    if "alt" in query and len(query["alt"]) > 0:
-                        alt = self.http.get(query["alt"][0])
+                    if self.json_keys["alt"] in query and len(query[self.json_keys["alt"]]) > 0:
+                        alt = self.http.get(query[self.json_keys["alt"]][0])
                         if alt:
                             streams = dashparse(self.options, self.http.request("get", alt.request.url), alt.request.url)
                             if streams:
                                 for n in list(streams.keys()):
                                     yield streams[n]
-    def _save_info(self, janson):
-        data = None
+    def _parse_info(self, janson,video=False):
+        data = {}
+        data['signInterpretation'] = False
+        data['audiodescription'] = False
+        
+        #start info intersting for parsing into info file with --get-info
+        if self.json_keys["accessService"] in janson:
+            if self.json_keys["accessService"] == self.json_keys["audioDescription"]:
+                   data['audiodescription'] = True
 
-        program = janson["video"]["programTitle"]
-        title = janson["video"]["title"]
+            if self.json_keys["accessService"] == self.json_keys["signInterpretation"]:
+                data['signInterpretation'] = True
+                
+        if video: 
+            janson = janson["video"]
+        
+        program = janson[self.json_keys["programTitle"]]
+        title = janson[self.json_keys["title"]]
 
         if program != title and program:
-            data = "Show: %s\n" % (program)
+            data['show'] = program
             
-        data = "Title: %s" % title
-        if "broadcastDate" in janson["video"]:
-            data+= "\nBroadcast Date: %s" % janson["video"]["broadcastDate"]
-        if "publishDate" in janson["video"]:
-            data+= "\nPublishDate Date: %s" % janson["video"]["publishDate"]
-        data+= "\nDuration: %s min" % str(ceil(janson["video"]["materialLength"]/60))
-        if "episodic" in janson["video"]:
-            data += "\nSeason: %s \nEpisode: %s" % (janson["video"]["season"],janson["video"]["episodeNumber"])
-        if "titleType" in janson["video"]:
-            if janson["video"]["titleType"] == "MOVIE":
-                type = "Movie"
-            elif janson["video"]["titleType"] == "SERIES_OR_TV_SHOW":
-                type = "TV-Show"
-            elif janson["video"]["titleType"] == "CLIP":
-                type = "Clip"
+        data['title'] = title
+        
+        if self.json_keys["broadcastDate"] in janson:
+            data['broadcastDate']= janson[self.json_keys["broadcastDate"]]
+        if self.json_keys["publishDate"] in janson:
+            data['publishDate'] = janson[self.json_keys["publishDate"]]
+        data[self.json_keys['duration']] = ceil(janson["materialLength"]/60)
+        if self.json_keys["episodic"] in janson:
+            data['season'] = janson[self.json_keys["season"]]
+            data['episode'] = janson[self.json_keys["episodeNumber"]]
+        if self.json_keys["titleType"] in janson:
+            if janson[self.json_keys["titleType"]] == "MOVIE":
+                data[self.json_keys["titleType"]] = 'Movie'
+            elif janson[self.json_keys["titleType"]] == "SERIES_OR_TV_SHOW":
+                data[self.json_keys["titleType"]] = 'TV-Show'
+            elif janson[self.json_keys["titleType"]] == "CLIP":
+                data['type'] = 'Clip'
             else:
-                type = janson["video"]["titleType"]
-            data+="\nType: %s" % type
+               data['type'] = janson[self.json_keys["titleType"]]
             
-       
-            if "accessService" in janson:
-                if janson["accessService"] == "audioDescription":
-                       data+="Audiodescription: True"
-                if janson["accessService"] == "signInterpretation":
-                    data += "\nSignInterpretation: True" 
-        if "closedCaptioned" in janson["video"]:
-            data+="\nClosed Captioned: True"
-        if "description" in janson["video"]:
-            data += "\nDescription: " + janson["video"]["description"]
+            
+        if self.json_keys["closedCaptioned"] in janson:
+            data['subtitle'] = True
+        if self.json_keys["description"] in janson:
+            if janson[self.json_keys["description"]]:
+                data['description'] = janson[self.json_keys["description"]]
+                
+        #start data used for internal used
+        if self.json_keys["programVersionId"] in janson:
+            data["vid"] = janson[self.json_keys["programVersionId"]]
+        else:
+            data["vid"] = janson[self.json_keys["id"]]
+        
         return data
             
     def _last_chance(self, videos, page, maxpage=2):
@@ -185,10 +248,10 @@ class Svtplay(Service, OpenGraphThumbMixin):
             return videos
 
         dataj = json.loads(match.group(1))
-        pages = dataj["gridPage"]["pagination"]["totalPages"]
+        pages = dataj[self.json_keys["gridPage"]][self.json_keys["pagination"]][self.json_keys["totalPages"]]
 
-        for i  in dataj["gridPage"]["content"]:
-            videos.append(i["contentUrl"])
+        for i  in dataj[self.json_keys["gridPage"]][self.json_keys["content"]]:
+            videos.append(i[self.json_keys["contentUrl"]])
         page += 1
         self._last_chance(videos, page, pages)
         return videos
@@ -196,15 +259,15 @@ class Svtplay(Service, OpenGraphThumbMixin):
     def _genre(self, jansson):
         videos = []
         parse = urlparse(self._url)
-        dataj = jansson["clusterPage"]
+        dataj = jansson[self.json_keys["clusterPage"]]
         tab = re.search("tab=(.+)", parse.query)
         if tab:
             tab = tab.group(1)
-            for i in dataj["tabs"]:
-                if i["slug"] == tab:
-                    videos = self.videos_to_list(i["content"], videos)
+            for i in dataj[self.json_keys["tabs"]]:
+                if i[self.json_keys["slug"]] == tab:
+                    videos = self.videos_to_list(i[self.json_keys["content"]], videos)
         else:
-            videos = self.videos_to_list(dataj["clips"], videos)
+            videos = self.videos_to_list(dataj[self.json_keys["clips"]], videos)
 
         return videos
 
@@ -238,18 +301,18 @@ class Svtplay(Service, OpenGraphThumbMixin):
                         if match:
                             tab = match.group(1)
 
-                    items = dataj["videoTitlePage"]["relatedVideosTabs"]
+                    items = dataj[self.json_keys["videoTitlePage"]][self.json_keys["relatedVideosTabs"]]
                     for i in items:
                         if tab:
-                            if i["slug"] == tab:
+                            if i[self.json_keys["slug"]] == tab:
                                 videos = self.videos_to_list(i["videos"], videos)
 
                         else:
-                            if "sasong" in i["slug"] or "senast" in i["slug"]:
+                            if "sasong" in i[self.json_keys["slug"]] or "senast" in i[self.json_keys["slug"]]:
                                 videos = self.videos_to_list(i["videos"], videos)
 
                         if self.options.include_clips: 
-                            if i["slug"] == "klipp":
+                            if i[self.json_keys["slug"]] == "klipp":
                                 videos = self.videos_to_list(i["videos"], videos)
 
             episodes = [urljoin("http://www.svtplay.se", x) for x in videos]
@@ -264,19 +327,20 @@ class Svtplay(Service, OpenGraphThumbMixin):
 
     def videos_to_list(self, lvideos, videos):
         for n in lvideos:
-            parse = urlparse(n["contentUrl"])
+            parse = urlparse(n[self.json_keys["contentUrl"]])
             if parse.path not in videos:
-                filename = self.outputfilename(n, self.options.output)
+                parsed_info = self._parse_info(n,False)
+                filename = self.outputfilename(parsed_info, self.options.output)
                 if not self.exclude2(filename):
                     videos.append(parse.path)
-            if "versions" in n:
-                for i in n["versions"]:
-                    parse = urlparse(i["contentUrl"])
+            if self.json_keys["versions"] in n:
+                for i in n[self.json_keys["versions"]]:
+                    parse = urlparse(i[self.json_keys["contentUrl"]])
                     filename = "" # output is None here.
-                    if "accessService" in i:
-                        if i["accessService"] == "audioDescription":
+                    if self.json_keys["accessService"] in i:
+                        if i[self.json_keys["accessService"]] == self.json_keys["audioDescription"]:
                             filename += "-syntolkat"
-                        if i["accessService"] == "signInterpretation":
+                        if i[self.json_keys["accessService"]] == "signInterpretation":
                             filename += "-teckentolkat"
                     if not self.exclude2(filename) and parse.path not in videos:
                         videos.append(parse.path)
@@ -289,14 +353,12 @@ class Svtplay(Service, OpenGraphThumbMixin):
         else:
             directory = ""
         name = None
-        if data["programTitle"]:
-            name = filenamify(data["programTitle"])
+        if "show" in data:
+            name = filenamify(data["show"])
         other = filenamify(data["title"])
 
-        if "programVersionId" in data:
-            vid = str(data["programVersionId"])
-        else:
-            vid = str(data["id"])
+        vid = data["vid"]
+        
         if is_py2:
             id = hashlib.sha256(vid).hexdigest()[:7]
         else:
@@ -313,10 +375,9 @@ class Svtplay(Service, OpenGraphThumbMixin):
             title += ".%s" % season
         if other:
             title += ".%s" % other
-        if "accessService" in data:
-            if data["accessService"] == "audioDescription":
+        if data["audiodescription"]:
                 title += "-syntolkat"
-            if data["accessService"] == "signInterpretation":
+        if data["signInterpretation"]:
                 title += "-teckentolkat"
         title += "-%s-svtplay" % id
         title = filenamify(title)
@@ -329,7 +390,7 @@ class Svtplay(Service, OpenGraphThumbMixin):
     def seasoninfo(self, data):
         if "season" in data and data["season"]:
             season = "{:02d}".format(data["season"])
-            episode = "{:02d}".format(data["episodeNumber"])
+            episode = "{:02d}".format(data["episode"])
             if int(season) == 0 and int(episode) == 0:
                 return None
             return "S%sE%s" % (season, episode)
