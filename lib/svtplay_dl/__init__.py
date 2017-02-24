@@ -302,6 +302,7 @@ def get_one_media(stream, options):
     if options.get_info and options.output != "-" and not options.get_url:
         for inf in infos:
             inf.save()
+            inf.save_info()
             
     if options.merge_subtitle and not options.subtitle:
         options_subs_dl(subfixes)
