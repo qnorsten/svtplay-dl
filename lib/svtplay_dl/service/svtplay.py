@@ -275,14 +275,26 @@ class Svtplay(Service, OpenGraphThumbMixin):
         parse = urlparse(self._url)
         
         if len(parse.path) > 7 and parse.path[-7:] == "rss.xml":
-            match = self.url
+            rss_url = self.url
         else:
-            match = re.search(r'<link rel="alternate" type="application/rss\+xml" [^>]*href="([^"]+)"',
-                              self.get_urldata())
-            if match:
-                match = match.group(1)
+            rss_url = re.search(r'<link rel="alternate" type="application/rss\+xml" [^>]*href="([^"]+)"', self.get_urldata())
             
-        if match is None:
+        valid_rss = False
+        if rss_url:
+            rss_url = rss_url.group(1)
+            rss_data = self.http.request("get", rss_url).content
+
+            try:
+                xml = ET.XML(rss_data)
+                episodes = [x.text for x in xml.findall(".//item/link")]
+                #TODO add better checks for valid RSS-feed here
+                valid_rss = True
+            except ET.ParseError:
+                log.info("Error parsing RSS-feed at %s, make sure it is a valid RSS-feed, will use other method to find episodes" % rss_url)
+        # else:
+            # valid_rss = False
+            
+        if not valid_rss:
             videos = []
             tab = None
             match = re.search("__svtplay'] = ({.*});", self.get_urldata())
@@ -316,10 +328,6 @@ class Svtplay(Service, OpenGraphThumbMixin):
                                 videos = self.videos_to_list(i["videos"], videos)
 
             episodes = [urljoin("http://www.svtplay.se", x) for x in videos]
-        else:
-            data = self.http.request("get", match).content
-            xml = ET.XML(data)
-            episodes = [x.text for x in xml.findall(".//item/link")]
             
         if options.all_last > 0:
             return sorted(episodes[-options.all_last:])
