@@ -45,6 +45,7 @@ class Twitch(Service):
 
     api_base_url = 'https://api.twitch.tv'
     hls_base_url = 'http://usher.justin.tv/api/channel/hls'
+    client_ID = 'lsm0zv3vhu2wmpqncg1bohgbcbogc8'
 
     def get(self):
         urlp = urlparse(self.url)
@@ -53,17 +54,17 @@ class Twitch(Service):
             yield ServiceError("Excluding video")
             return
 
-        match = re.match(r'/(\w+)/([bcv])/(\d+)', urlp.path)
+        match = re.match(r'/([bc]|videos)/(\d+)', urlp.path)
         if not match:
             if re.search("clips.twitch.tv", urlp.netloc):
                 data = self._get_clips(self.options)
             else:
                 data = self._get_channel(self.options, urlp)
         else:
-            if match.group(2) in ["b", "c"]:
+            if match.group(1) in ["b", "c"]:
                 yield ServiceError("This twitch video type is unsupported")
                 return
-            data = self._get_archive(self.options, match.group(3))
+            data = self._get_archive(self.options, match.group(2))
         try:
             for i in data:
                 yield i
@@ -130,7 +131,7 @@ class Twitch(Service):
         # path unless the API method already is absolute.
         if method[0] != '/':
             method = '/kraken/%s' % method
-
+        self.http.headers["Client-ID"] = self.client_ID
         payload = self.http.request("get", url)
         return json.loads(payload.text)
 
@@ -141,8 +142,8 @@ class Twitch(Service):
         return "%s/%s.m3u8?%s" % (self.hls_base_url, channel, query)
 
     def _get_channel(self, options, urlp):
+        
         match = re.match(r'/(\w+)', urlp.path)
-
         if not match:
             raise TwitchUrlException('channel', urlp.geturl())
 
