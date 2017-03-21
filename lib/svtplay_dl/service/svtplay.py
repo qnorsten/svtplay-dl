@@ -280,7 +280,14 @@ class Svtplay(Service, OpenGraphThumbMixin):
             rss_url = re.search(r'<link rel="alternate" type="application/rss\+xml" [^>]*href="([^"]+)"', self.get_urldata())
             
         valid_rss = False
-        if rss_url:
+        tab = None
+        if parse.query: 
+            match = re.search("tab=(.+)", parse.query)
+            if match:
+                tab = match.group(1)
+
+        #Clips and tab can not be used with RSS-feed
+        if rss_url and not self.options.include_clips and not tab:
             rss_url = rss_url.group(1)
             rss_data = self.http.request("get", rss_url).content
 
@@ -296,7 +303,6 @@ class Svtplay(Service, OpenGraphThumbMixin):
             
         if not valid_rss:
             videos = []
-            tab = None
             match = re.search("__svtplay'] = ({.*});", self.get_urldata())
             if re.search("sista-chansen", parse.path):
                 videos = self._last_chance(videos, 1)
@@ -308,11 +314,6 @@ class Svtplay(Service, OpenGraphThumbMixin):
                 if re.search("/genre", parse.path):
                     videos = self._genre(dataj)
                 else:
-                    if parse.query: 
-                        match = re.search("tab=(.+)", parse.query)
-                        if match:
-                            tab = match.group(1)
-
                     items = dataj[self.json_keys["videoTitlePage"]][self.json_keys["relatedVideosTabs"]]
                     for i in items:
                         if tab:
