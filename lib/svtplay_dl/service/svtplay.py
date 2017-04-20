@@ -298,8 +298,10 @@ class Svtplay(Service, OpenGraphThumbMixin):
                 valid_rss = True
             except ET.ParseError:
                 log.info("Error parsing RSS-feed at %s, make sure it is a valid RSS-feed, will use other method to find episodes" % rss_url)
-        # else:
-            # valid_rss = False
+        else:
+            #if either tab or include_clips is set remove rss.xml from url if set manually. 
+            if len(parse.path) > 7 and parse.path[-7:] == "rss.xml":
+                self._url = self.url.replace("rss.xml","")
             
         if not valid_rss:
             videos = []
