@@ -101,15 +101,13 @@ class Viaplay(Service, OpenGraphThumbMixin):
         if match:
             return match.group(1)
         return None
+        
     def _get_video_data(self, vid):
         url = "http://playapi.mtgx.tv/v3/videos/%s" % vid
         self.options.other = ""
         data = self.http.request("get", url)
-        #todo make it work with this code
-        # if data.status_code == 403:
-            # yield ServiceError("Can't play this because the video is geoblocked.")
-            # return
-        return data.text
+        
+        return data
     
     def outputfilename(self, data,vid, filename):
         self.options.service = "viafree"
@@ -133,7 +131,10 @@ class Viaplay(Service, OpenGraphThumbMixin):
             return
             
         data = self. _get_video_data(vid)
-        dataj = json.loads(data)
+        if data.status_code == 403:
+            yield ServiceError("Can't play this because the video is geoblocked.")
+            return
+        dataj = json.loads(data.text)
         
         if "msg" in dataj:
             yield ServiceError(dataj["msg"])
@@ -229,16 +230,15 @@ class Viaplay(Service, OpenGraphThumbMixin):
         if options.all_last > 0:
             return sorted(episodes[-options.all_last:])
         return sorted(episodes)
-
+        
+ 
+            
     def _videos_to_list(self, url,vid, episodes):
-        dataj = json.loads(self._get_video_data(vid))
-        #TODO fix this error code here 
-        # if self.json_keys["MSG"] in dataj:
-            # yield ServiceError(dataj[self.json_keys["MSG"]])
-            # return
-        filename = self.outputfilename(dataj, vid, self.options.output)
-        if not self.exclude2(filename) and url not in episodes:
-                        episodes.append(url)
+        dataj = json.loads(self._get_video_data(vid).text)
+        if not "msg" in dataj:
+            filename = self.outputfilename(dataj, vid, self.options.output)
+            if not self.exclude2(filename) and url not in episodes:
+                episodes.append(url)
         return episodes
         
     def _autoname(self, dataj):
