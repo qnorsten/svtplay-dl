@@ -72,14 +72,17 @@ class Viaplay(Service, OpenGraphThumbMixin):
         "SUMMARY":"summary",
     }
 
-    def _get_video_id(self):
+    def _get_video_id(self ,url = None):
         """
         Extract video id. It will try to avoid making an HTTP request
         if it can find the ID in the URL, but otherwise it will try
         to scrape it from the HTML document. Returns None in case it's
         unable to extract the ID at all.
         """
-        html_data = self.get_urldata()
+        if url:
+            html_data = self.http.request("get", url).text
+        else:
+            html_data = self.get_urldata()
         match = re.search(r'data-video-id="([0-9]+)"', html_data)
         if match:
             return match.group(1)
@@ -140,36 +143,49 @@ class Viaplay(Service, OpenGraphThumbMixin):
             return match.group(1)
         return None
 
+    def _get_video_data(self, vid):
+        url = "http://playapi.mtgx.tv/v3/videos/%s" % vid
+        self.options.other = ""
+        data = self.http.request("get", url)
+        #todo make it work with this code
+        # if data.status_code == 403:
+            # yield ServiceError("Can't play this because the video is geoblocked.")
+            # return
+        return data.text
+        
+    def outputfilename(self, data,vid, filename):
+        self.options.service = "viafree"
+        if filename:
+            directory = os.path.dirname(filename)
+        else:
+            directory = ""
+            
+        basename = self._autoname(data)
+        title = "%s-%s-%s" % (basename, vid, self.options.service)
+        if len(directory):
+            output = os.path.join(directory, title)
+        else:
+            output = title
+        return output
+        
     def get(self):
         vid = self._get_video_id()
         if vid is None:
             yield ServiceError("Can't find video file for: %s" % self.url)
             return
-
-        url = "http://playapi.mtgx.tv/v3/videos/%s" % vid
-        self.options.other = ""
-        data = self.http.request("get", url)
-        if data.status_code == 403:
-            yield ServiceError("Can't play this because the video is geoblocked.")
-            return
-        dataj = json.loads(data.text)
+        data = self. _get_video_data(vid)
+        dataj = json.loads(data)
+        
         if self.json_keys["MSG"] in dataj:
             yield ServiceError(dataj[self.json_keys["MSG"]])
             return
-
+            
         if dataj[self.json_keys["TYPE"]] == "live":
             self.options.live = True
-
+            
         if self.options.output_auto:
-            directory = os.path.dirname(self.options.output)
-            self.options.service = "viafree"
-            basename = self._autoname(dataj)
-            title = "%s-%s-%s" % (basename, vid, self.options.service)
-            if len(directory):
-                self.options.output = os.path.join(directory, title)
-            else:
-                self.options.output = title
-                
+            self.options.output = self.outputfilename(dataj,vid, self.options.output)
+          
         if self.exclude():
             yield ServiceError("Excluding video")
             return
@@ -236,7 +252,7 @@ class Viaplay(Service, OpenGraphThumbMixin):
                     yield streams[n]
 
     def find_all_episodes(self, options):
-        videos = []
+        episodes = []  
         match = re.search('"ContentPageProgramStore":({.*}),"ApplicationStore', self.get_urldata())
         if match:
             janson = json.loads(match.group(1))
@@ -250,22 +266,31 @@ class Viaplay(Service, OpenGraphThumbMixin):
                         seasons.append(i[self.json_keys["SEASONNUMBER"]])
                 else:
                     seasons.append(i[self.json_keys["SEASONNUMBER"]])
-
+                    
             for i in seasons:
-                if self.json_keys["PROGRAM"] in janson[self.json_keys["FORMAT"]][self.json_keys["VIDEOS"]][str(i)]:
-                    for n in janson[self.json_keys["FORMAT"]][self.json_keys["VIDEOS"]][str(i)][self.json_keys["PROGRAM"]]:
-                        videos.append(n[self.json_keys["SHARINGURL"]])
-                if self.options.include_clips:
-                    if self.json_keys["CLIP"] in janson[self.json_keys["FORMAT"]][self.json_keys["VIDEOS"]][str(i)]:
-                        for n in janson[self.json_keys["FORMAT"]][self.json_keys["VIDEOS"]][str(i)][self.json_keys["CLIP"]]:
-                            videos.append(n[self.json_keys["SHARINGURL"]])
+                    if self.json_keys["PROGRAM"] in janson[self.json_keys["FORMAT"]][self.json_keys["VIDEOS"]][str(i)]:
+                        for n in janson[self.json_keys["FORMAT"]][self.json_keys["VIDEOS"]][str(i)][self.json_keys["PROGRAM"]]:
+                            episodes = self._videos_to_list(n[self.json_keys["SHARINGURL"]],n[self.json_keys["ID"]],episodes)
 
-        episodes = []
-        for i in videos:
-            episodes.append(i)        
+                    if self.options.include_clips:
+                        if self.json_keys["CLIP"] in janson[self.json_keys["FORMAT"]][self.json_keys["VIDEOS"]][str(i)]:
+                            for n in janson[self.json_keys["FORMAT"]][self.json_keys["VIDEOS"]][str(i)][self.json_keys["CLIP"]]:
+                                episodes = self._videos_to_list(n[self.json_keys["SHARINGURL"]],n[self.json_keys["ID"]],episodes)
+                                
         if options.all_last > 0:
             return sorted(episodes[-options.all_last:])
         return sorted(episodes)
+
+    def _videos_to_list(self, url,vid, episodes):
+        dataj = json.loads(self._get_video_data(vid))
+        #TODO fix this error code here 
+        # if self.json_keys["MSG"] in dataj:
+            # yield ServiceError(dataj[self.json_keys["MSG"]])
+            # return
+        filename = self.outputfilename(dataj, vid, self.options.output)
+        if not self.exclude2(filename) and url not in episodes:
+                        episodes.append(url)
+        return episodes
 
     def _autoname(self, dataj):
         program = dataj[self.json_keys["FORMAT_SLUG"]]
