@@ -185,7 +185,7 @@ class Svtplay(Service, OpenGraphThumbMixin):
         data['signInterpretation'] = False
         data['audiodescription'] = False
         
-        #start info intersting for parsing into info file with --get-info
+        #start info interesting for parsing into info file with --get-info
         if self.json_keys["ACCESSSERVICE"] in janson:
             if self.json_keys["ACCESSSERVICE"] == self.json_keys["AUDIODESCRIPTION"]:
                    data['audiodescription'] = True
