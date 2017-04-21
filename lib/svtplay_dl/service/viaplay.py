@@ -160,6 +160,16 @@ class Viaplay(Service, OpenGraphThumbMixin):
         if dataj[self.json_keys["TYPE"]] == "live":
             self.options.live = True
 
+        if self.options.output_auto:
+            directory = os.path.dirname(self.options.output)
+            self.options.service = "viafree"
+            basename = self._autoname(dataj)
+            title = "%s-%s-%s" % (basename, vid, self.options.service)
+            if len(directory):
+                self.options.output = os.path.join(directory, title)
+            else:
+                self.options.output = title
+                
         if self.exclude():
             yield ServiceError("Excluding video")
             return
@@ -175,16 +185,6 @@ class Viaplay(Service, OpenGraphThumbMixin):
             yield ServiceError("Can't play this because the video is either not found or geoblocked.")
             return
 
-        if self.options.output_auto:
-            directory = os.path.dirname(self.options.output)
-            self.options.service = "viafree"
-            basename = self._autoname(dataj)
-            title = "%s-%s-%s" % (basename, vid, self.options.service)
-            if len(directory):
-                self.options.output = os.path.join(directory, title)
-            else:
-                self.options.output = title
-                
         if self.options.get_info:
             video_info = self._get_info(dataj)
             if video_info:
