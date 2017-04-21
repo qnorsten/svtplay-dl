@@ -35,45 +35,41 @@ class Viaplay(Service, OpenGraphThumbMixin):
     # Should only need to update this function on json update
     # Format is key_used_in_script: key_from_webpage
     json_keys = {
-        "id":"id",
-        "seasonNumberOrVideoId":"seasonNumberOrVideoId",
-        "videoIdOrEpisodeNumber":"videoIdOrEpisodeNumber",
-        "format":"format",
-        "videos":"videos",
-        "program":"program",
-        "episodeNumber":"episodeNumber",
-        "seasonNumber":"seasonNumber",
-        "msg":"msg",
-        "type":"type",
-        "sami_path":"sami_path",
-        "sami_path":"subtitles_webvtt",
-        "sami_path":"subtitles_for_hearing_impaired",
-        "sami_path":"sami_path",
-        "streams":"streams",
-        "medium":"medium",
-        "hls":"hls",
-        "seasons":"seasons",
-        "seasonNumber":"seasonNumber",
-        "sharingUrl":"sharingUrl",
-        "clip":"clip",
-        "format_slug":"format_slug",
-        "clip":"clip",
-        "format_position":"format_position",
-        "title":"title",
-        "derived_from_id":"derived_from_id",
-        "season":"season",
-        "episode":"episode",
-        "format_title":"format_title",
-        "broadcasts":"broadcasts",
-        "air_at":"air_at",
-        "playable_from":"playable_from",
-        "duration":"duration",
-        "is_episodic":"is_episodic",
-        "type":"type",
-        "description":"description",
-        "summary":"summary",
-        "subtitles_webvtt":"subtitles_webvtt",
-        "subtitles_for_hearing_impaired":"subtitles_for_hearing_impaired",
+        "ID":"id",
+        "SEASONNUMBERORVIDEOID":"seasonNumberOrVideoId",
+        "VIDEOIDOREPISODENUMBER":"videoIdOrEpisodeNumber",
+        "FORMAT":"format",
+        "VIDEOS":"videos",
+        "PROGRAM":"program",
+        "EPISODENUMBER":"episodeNumber",
+        "SEASONNUMBER":"seasonNumber",
+        "MSG":"msg",
+        "TYPE":"type",
+        "SAMI_PATH":"sami_path",
+        "SUBTITLES_WEBVTT":"subtitles_webvtt",
+        "SUBTITLES_FOR_HEARING_IMPAIRED":"subtitles_for_hearing_impaired",
+        "STREAMS":"streams",
+        "MEDIUM":"medium",
+        "HLS":"hls",
+        "SEASONS":"seasons",
+        "SEASONNUMBER":"seasonNumber",
+        "SHARINGURL":"sharingUrl",
+        "CLIP":"clip",
+        "FORMAT_SLUG":"format_slug",
+        "FORMAT_POSITION":"format_position",
+        "TITLE":"title",
+        "DERIVED_FROM_ID":"derived_from_id",
+        "SEASON":"season",
+        "EPISODE":"episode",
+        "FORMAT_TITLE":"format_title",
+        "BROADCASTS":"broadcasts",
+        "AIR_AT":"air_at",
+        "PLAYABLE_FROM":"playable_from",
+        "DURATION":"duration",
+        "IS_EPISODIC":"is_episodic",
+        "TYPE":"type",
+        "DESCRIPTION":"description",
+        "SUMMARY":"summary",
     }
 
     def _get_video_id(self):
@@ -95,15 +91,15 @@ class Viaplay(Service, OpenGraphThumbMixin):
         match = re.search('params":({.*}),"query', self.get_urldata())
         if match:
             jansson = json.loads(match.group(1))
-            if self.json_keys["seasonNumberOrVideoId"] in jansson:
-                season = jansson[self.json_keys["seasonNumberOrVideoId"]]
+            if self.json_keys["SEASONNUMBERORVIDEOID"] in jansson:
+                season = jansson[self.json_keys["SEASONNUMBERORVIDEOID"]]
                 match = re.search("\w-(\d+)$", season)
                 if match:
                     season = match.group(1)
             else:
                 return False
-            if self.json_keys["videoIdOrEpisodeNumber"] in jansson:
-                videp = jansson[self.json_keys["videoIdOrEpisodeNumber"]]
+            if self.json_keys["VIDEOIDOREPISODENUMBER"] in jansson:
+                videp = jansson[self.json_keys["VIDEOIDOREPISODENUMBER"]]
                 match = re.search('(\w+)-(\d+)', videp)
                 if match:
                     episodenr = match.group(2)
@@ -127,12 +123,12 @@ class Viaplay(Service, OpenGraphThumbMixin):
                 match = re.search('"ContentPageProgramStore":({.*}),"ApplicationStore', self.get_urldata())
                 if match:
                     janson = json.loads(match.group(1))
-                    for i in janson[self.json_keys["format"]][self.json_keys["videos"]].keys():
-                        if self.json_keys["program"] in janson[self.json_keys["format"]][self.json_keys["videos"]][str(i)]:
-                            for n in janson[self.json_keys["format"]][self.json_keys["videos"]][i][self.json_keys["program"]]:
-                                if str(n[self.json_keys["episodeNumber"]]) and int(episodenr) == n[self.json_keys["episodeNumber"]] and int(season) == n[self.json_keys["seasonNumber"]]:
-                                    return n[self.json_keys["id"]]
-                                elif n[self.json_keys["id"]] == episodenr:
+                    for i in janson[self.json_keys["FORMAT"]][self.json_keys["VIDEOS"]].keys():
+                        if self.json_keys["PROGRAM"] in janson[self.json_keys["FORMAT"]][self.json_keys["VIDEOS"]][str(i)]:
+                            for n in janson[self.json_keys["FORMAT"]][self.json_keys["VIDEOS"]][i][self.json_keys["PROGRAM"]]:
+                                if str(n[self.json_keys["EPISODENUMBER"]]) and int(episodenr) == n[self.json_keys["EPISODENUMBER"]] and int(season) == n[self.json_keys["SEASONNUMBER"]]:
+                                    return n[self.json_keys["ID"]]
+                                elif n[self.json_keys["ID"]] == episodenr:
                                     return episodenr
 
         parse = urlparse(self.url)
@@ -157,11 +153,11 @@ class Viaplay(Service, OpenGraphThumbMixin):
             yield ServiceError("Can't play this because the video is geoblocked.")
             return
         dataj = json.loads(data.text)
-        if self.json_keys["msg"] in dataj:
-            yield ServiceError(dataj[self.json_keys["msg"]])
+        if self.json_keys["MSG"] in dataj:
+            yield ServiceError(dataj[self.json_keys["MSG"]])
             return
 
-        if dataj[self.json_keys["type"]] == "live":
+        if dataj[self.json_keys["TYPE"]] == "live":
             self.options.live = True
 
         if self.exclude():
@@ -175,7 +171,7 @@ class Viaplay(Service, OpenGraphThumbMixin):
         streamj = json.loads(streams.text)
         
 
-        if self.json_keys["msg"] in streamj:
+        if self.json_keys["MSG"] in streamj:
             yield ServiceError("Can't play this because the video is either not found or geoblocked.")
             return
 
@@ -197,26 +193,26 @@ class Viaplay(Service, OpenGraphThumbMixin):
             else: 
                 log.info("Couldn't get info for this episode")
                 
-        if dataj[self.json_keys["sami_path"]]:
-            if dataj[self.json_keys["sami_path"]].endswith("vtt"):
+        if dataj[self.json_keys["SAMI_PATH"]]:
+            if dataj[self.json_keys["SAMI_PATH"]].endswith("vtt"):
                 subtype = "wrst"
             else:
                 subtype = "sami"
-            yield subtitle(copy.copy(self.options), subtype, dataj[self.json_keys["sami_path"]])
-        if dataj[self.json_keys["subtitles_webvtt"]]:
-            yield subtitle(copy.copy(self.options), "wrst", dataj[self.json_keys["subtitles_webvtt"]])
+            yield subtitle(copy.copy(self.options), subtype, dataj[self.json_keys["SAMI_PATH"]])
+        if dataj[self.json_keys["SUBTITLES_WEBVTT"]]:
+            yield subtitle(copy.copy(self.options), "wrst", dataj[self.json_keys["SUBTITLES_WEBVTT"]])
         if dataj["subtitles_for_hearing_impaired"]:
-            if dataj[self.json_keys["subtitles_for_hearing_impaired"]].endswith("vtt"):
+            if dataj[self.json_keys["SUBTITLES_FOR_HEARING_IMPAIRED"]].endswith("vtt"):
                 subtype = "wrst"
             else:
                 subtype = "sami"
             if self.options.get_all_subtitles:
-                yield subtitle(copy.copy(self.options), subtype, dataj[self.json_keys["subtitles_for_hearing_impaired"]], "-SDH")
+                yield subtitle(copy.copy(self.options), subtype, dataj[self.json_keys["SUBTITLES_FOR_HEARING_IMPAIRED"]], "-SDH")
             else: 
-                yield subtitle(copy.copy(self.options), subtype, dataj[self.json_keys["subtitles_for_hearing_impaired"]])
+                yield subtitle(copy.copy(self.options), subtype, dataj[self.json_keys["SUBTITLES_FOR_HEARING_IMPAIRED"]])
 
-        if streamj[self.json_keys["streams"]][self.json_keys["medium"]]:
-            filename = streamj[self.json_keys["streams"]][self.json_keys["medium"]]
+        if streamj[self.json_keys["STREAMS"]][self.json_keys["MEDIUM"]]:
+            filename = streamj[self.json_keys["STREAMS"]][self.json_keys["MEDIUM"]]
             if ".f4m" in filename:
                 streams = hdsparse(self.options, self.http.request("get", filename, params={"hdcore": "3.7.0"}), filename)
                 if streams:
@@ -233,8 +229,8 @@ class Viaplay(Service, OpenGraphThumbMixin):
                 self.options.other = "-W http://flvplayer.viastream.viasat.tv/flvplayer/play/swf/player.swf %s" % path
                 yield RTMP(copy.copy(self.options), filename, 800)
 
-        if streamj[self.json_keys["streams"]][self.json_keys["hls"]]:
-            streams = hlsparse(self.options, self.http.request("get", streamj[self.json_keys["streams"]][self.json_keys["hls"]]),streamj[self.json_keys["streams"]][self.json_keys["hls"]])
+        if streamj[self.json_keys["STREAMS"]][self.json_keys["HLS"]]:
+            streams = hlsparse(self.options, self.http.request("get", streamj[self.json_keys["STREAMS"]][self.json_keys["HLS"]]),streamj[self.json_keys["STREAMS"]][self.json_keys["HLS"]])
             if streams:
                 for n in list(streams.keys()):
                     yield streams[n]
@@ -248,21 +244,21 @@ class Viaplay(Service, OpenGraphThumbMixin):
             if season:
                 season = season.group(1)
             seasons = []
-            for i in janson[self.json_keys["format"]][self.json_keys["seasons"]]:
+            for i in janson[self.json_keys["FORMAT"]][self.json_keys["SEASONS"]]:
                 if season:
-                    if int(season) == i[self.json_keys["seasonNumber"]]:
-                        seasons.append(i[self.json_keys["seasonNumber"]])
+                    if int(season) == i[self.json_keys["SEASONNUMBER"]]:
+                        seasons.append(i[self.json_keys["SEASONNUMBER"]])
                 else:
-                    seasons.append(i[self.json_keys["seasonNumber"]])
+                    seasons.append(i[self.json_keys["SEASONNUMBER"]])
 
             for i in seasons:
-                if self.json_keys["program"] in janson[self.json_keys["format"]][self.json_keys["videos"]][str(i)]:
-                    for n in janson[self.json_keys["format"]][self.json_keys["videos"]][str(i)][self.json_keys["program"]]:
-                        videos.append(n[self.json_keys["sharingUrl"]])
+                if self.json_keys["PROGRAM"] in janson[self.json_keys["FORMAT"]][self.json_keys["VIDEOS"]][str(i)]:
+                    for n in janson[self.json_keys["FORMAT"]][self.json_keys["VIDEOS"]][str(i)][self.json_keys["PROGRAM"]]:
+                        videos.append(n[self.json_keys["SHARINGURL"]])
                 if self.options.include_clips:
-                    if self.json_keys["clip"] in janson[self.json_keys["format"]][self.json_keys["videos"]][str(i)]:
-                        for n in janson[self.json_keys["format"]][self.json_keys["videos"]][str(i)][self.json_keys["clip"]]:
-                            videos.append(n[self.json_keys["sharingUrl"]])
+                    if self.json_keys["CLIP"] in janson[self.json_keys["FORMAT"]][self.json_keys["VIDEOS"]][str(i)]:
+                        for n in janson[self.json_keys["FORMAT"]][self.json_keys["VIDEOS"]][str(i)][self.json_keys["CLIP"]]:
+                            videos.append(n[self.json_keys["SHARINGURL"]])
 
         episodes = []
         for i in videos:
@@ -272,35 +268,35 @@ class Viaplay(Service, OpenGraphThumbMixin):
         return sorted(episodes)
 
     def _autoname(self, dataj):
-        program = dataj[self.json_keys["format_slug"]]
+        program = dataj[self.json_keys["FORMAT_SLUG"]]
         season = None
         episode = None
         title = None
 
-        if self.json_keys["season"] in dataj[self.json_keys["format_position"]]:
-            if dataj[self.json_keys["format_position"]][self.json_keys["season"]] > 0:
-                season = dataj[self.json_keys["format_position"]][self.json_keys["season"]]
+        if self.json_keys["SEASON"] in dataj[self.json_keys["FORMAT_POSITION"]]:
+            if dataj[self.json_keys["FORMAT_POSITION"]][self.json_keys["SEASON"]] > 0:
+                season = dataj[self.json_keys["FORMAT_POSITION"]][self.json_keys["SEASON"]]
         if season:
-            if len(dataj[self.json_keys["format_position"]][self.json_keys["episode"]]) > 0:
-                episode = dataj[self.json_keys["format_position"]][self.json_keys["episode"]]
+            if len(dataj[self.json_keys["FORMAT_POSITION"]][self.json_keys["EPISODE"]]) > 0:
+                episode = dataj[self.json_keys["FORMAT_POSITION"]][self.json_keys["EPISODE"]]
 
-        if dataj[self.json_keys["type"]] == "clip":
+        if dataj[self.json_keys["TYPE"]] == "clip":
             #Removes the show name from the end of the filename
             #e.g. Showname.S0X.title instead of Showname.S07.title-showname
             match = re.search(r'(.+)-', dataj["title"])
             if match:
                 title = filenamify(match.group(1))
             else:
-                title = filenamify(dataj[self.json_keys["title"]])
-            if self.json_keys["derived_from_id"] in dataj:
+                title = filenamify(dataj[self.json_keys["TITLE"]])
+            if self.json_keys["DERIVED_FROM_ID"] in dataj:
                 if self.json_keys[dataj["derived_from_id"]]:
                     parent_id = self.json_keys[dataj["derived_from_id"]]
                     datajparent = self._get_parent_info(parent_id)
                     if datajparent:
-                        if not season and datajparent[self.json_keys["format_position"]][self.json_keys["season"]] > 0:
-                            season = datajparent[self.json_keys["format_position"]][self.json_keys["season"]]
-                        if len(datajparent[self.json_keys["format_position"]][self.json_keys["episode"]]) > 0:
-                            episode = datajparent[self.json_keys["format_position"]][self.json_keys["episode"]]
+                        if not season and datajparent[self.json_keys["FORMAT_POSITION"]][self.json_keys["SEASON"]] > 0:
+                            season = datajparent[self.json_keys["FORMAT_POSITION"]][self.json_keys["SEASON"]]
+                        if len(datajparent[self.json_keys["FORMAT_POSITION"]][self.json_keys["EPISODE"]]) > 0:
+                            episode = datajparent[self.json_keys["FORMAT_POSITION"]][self.json_keys["EPISODE"]]
 
         name = filenamify(program)
         if season:
@@ -322,48 +318,48 @@ class Viaplay(Service, OpenGraphThumbMixin):
     def _get_info(self, json):
         data = {}
         
-        if json[self.json_keys['format_title']]:
-            data['show'] = json[self.json_keys['format_title']]
+        if json[self.json_keys["FORMAT_TITLE"]]:
+            data['show'] = json[self.json_keys["FORMAT_TITLE"]]
             
         # data['title'] = title
-        if self.json_keys["broadcasts"] in json:
+        if self.json_keys["BROADCASTS"] in json:
             #TODO add saftey checks here to only get first broadcast 
-            data['broadcastDate']= json[self.json_keys["broadcasts"]][0][self.json_keys["air_at"]]
-            data['publishDate']= json[self.json_keys["broadcasts"]][0][self.json_keys['playable_from']]
-        data['duration'] = ceil(json[self.json_keys["duration"]]/60)
+            data['broadcastDate']= json[self.json_keys["BROADCASTS"]][0][self.json_keys["AIR_AT"]]
+            data['publishDate']= json[self.json_keys["BROADCASTS"]][0][self.json_keys["PLAYABLE_FROM"]]
+        data['duration'] = ceil(json[self.json_keys["DURATION"]]/60)
         
-        if self.json_keys['format_position'] in json:
-            if self.json_keys['is_episodic'] in json[self.json_keys["format_position"]]:
-                data['season'] = json[self.json_keys["format_position"]][self.json_keys["season"]]
-                data['episode'] = json[self.json_keys["format_position"]][self.json_keys["episode"]]
+        if self.json_keys["FORMAT_POSITION"] in json:
+            if self.json_keys["IS_EPISODIC"] in json[self.json_keys["FORMAT_POSITION"]]:
+                data['season'] = json[self.json_keys["FORMAT_POSITION"]][self.json_keys["SEASON"]]
+                data['episode'] = json[self.json_keys["FORMAT_POSITION"]][self.json_keys["EPISODE"]]
                 
-        if self.json_keys["type"] in json:
-            if json[self.json_keys["type"]] == "program":
+        if self.json_keys["TYPE"] in json:
+            if json[self.json_keys["TYPE"]] == "program":
                 data["type"] = 'TV-Show'
-            elif json[self.json_keys["type"]] == "clip":
+            elif json[self.json_keys["TYPE"]] == "clip":
                 data['type'] = 'Clip'
-                if self.json_keys["title"] in json:
+                if self.json_keys["TITLE"] in json:
                     #Removes the show name from the end of the filename
                     #e.g. Showname.S0X.title instead of Showname.S07.title-showname
-                    match = re.search(r'(.+)-', json[self.json_keys["title"]])
+                    match = re.search(r'(.+)-', json[self.json_keys["TITLE"]])
                     if match:
                         title = match.group(1)
                     else:
-                        title = json[self.json_keys["title"]]
-                    parent_id = dataj[self.json_keys["derived_from_id"]]
+                        title = json[self.json_keys["TITLE"]]
+                    parent_id = dataj[self.json_keys["DERIVED_FROM_ID"]]
                     datajparent = self._get_parent_info(parent_id)
                     if datajparent:
-                        if datajparent[self.json_keys["format_position"]][self.json_keys["season"]] > 0:
-                            data[self.json_keys["parent_season"]] = datajparent[self.json["format_position"]][self.json_keys["season"]]
-                        if len(datajparent[self.json_keys["format_position"]][self.json_keys["episode"]]) > 0:
-                            data[self.json_keys["parent_episode"]] = datajparent[self.json_keys["format_position"]][self.json_keys["episode"]]
+                        if datajparent[self.json_keys["FORMAT_POSITION"]][self.json_keys["SEASON"]] > 0:
+                            data[self.json_keys["PARENT_SEASON"]] = datajparent[self.json["format_position"]][self.json_keys["SEASON"]]
+                        if len(datajparent[self.json_keys["FORMAT_POSITION"]][self.json_keys["EPISODE"]]) > 0:
+                            data[self.json_keys["PARENT_EPISODE"]] = datajparent[self.json_keys["FORMAT_POSITION"]][self.json_keys["EPISODE"]]
                 else:
-                   data['type'] = json[self.json_keys["type"]]
+                   data['type'] = json[self.json_keys["TYPE"]]
                    
-        if json[self.json_keys["sami_path"]] or json[self.json_keys["subtitles_for_hearing_impaired"]] or json[self.json_keys["subtitles_webvtt"]]:
+        if json[self.json_keys["SAMI_PATH"]] or json[self.json_keys["SUBTITLES_FOR_HEARING_IMPAIRED"]] or json[self.json_keys["SUBTITLES_WEBVTT"]]:
             data['subtitle'] = True
-        if self.json_keys["summary"] in json:
-            data['description'] = json[self.json_keys["summary"]]
-        if self.json_keys["description"] in json:
-            data["description"]+= "\n" + json[self.json_keys["description"]]
+        if self.json_keys["SUMMARY"] in json:
+            data['description'] = json[self.json_keys["SUMMARY"]]
+        if self.json_keys["DESCRIPTION"] in json:
+            data["description"]+= "\n" + json[self.json_keys["DESCRIPTION"]]
         return data
