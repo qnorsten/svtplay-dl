@@ -143,38 +143,18 @@ class Viaplay(Service, OpenGraphThumbMixin):
             return match.group(1)
         return None
 
-    def _get_video_data(self, vid):
-        url = "http://playapi.mtgx.tv/v3/videos/%s" % vid
-        self.options.other = ""
-        data = self.http.request("get", url)
-        #todo make it work with this code
-        # if data.status_code == 403:
-            # yield ServiceError("Can't play this because the video is geoblocked.")
-            # return
-        return data.text
-        
-    def outputfilename(self, data,vid, filename):
-        self.options.service = "viafree"
-        if filename:
-            directory = os.path.dirname(filename)
-        else:
-            directory = ""
-            
-        basename = self._autoname(data)
-        title = "%s-%s-%s" % (basename, vid, self.options.service)
-        if len(directory):
-            output = os.path.join(directory, title)
-        else:
-            output = title
-        return output
-        
     def get(self):
         vid = self._get_video_id()
         if vid is None:
             yield ServiceError("Can't find video file for: %s" % self.url)
             return
         data = self. _get_video_data(vid)
-        dataj = json.loads(data)
+        
+        if data.status_code == 403:
+            yield ServiceError("Can't play this because the video is geoblocked.")
+            return
+            
+        dataj = json.loads(data.text)
         
         if self.json_keys["MSG"] in dataj:
             yield ServiceError(dataj[self.json_keys["MSG"]])
@@ -282,15 +262,33 @@ class Viaplay(Service, OpenGraphThumbMixin):
         return sorted(episodes)
 
     def _videos_to_list(self, url,vid, episodes):
-        dataj = json.loads(self._get_video_data(vid))
-        #TODO fix this error code here 
-        # if self.json_keys["MSG"] in dataj:
-            # yield ServiceError(dataj[self.json_keys["MSG"]])
-            # return
-        filename = self.outputfilename(dataj, vid, self.options.output)
-        if not self.exclude2(filename) and url not in episodes:
-                        episodes.append(url)
+        dataj = json.loads(self._get_video_data(vid).text)
+        if not self.json_keys["MSG"] in dataj:
+            filename = self.outputfilename(dataj, vid, self.options.output)
+            if not self.exclude2(filename) and url not in episodes:
+                            episodes.append(url)
         return episodes
+        
+    def _get_video_data(self, vid):
+        url = "http://playapi.mtgx.tv/v3/videos/%s" % vid
+        self.options.other = ""
+        data = self.http.request("get", url)
+        return data
+        
+    def outputfilename(self, data,vid, filename):
+        self.options.service = "viafree"
+        if filename:
+            directory = os.path.dirname(filename)
+        else:
+            directory = ""
+            
+        basename = self._autoname(data)
+        title = "%s-%s-%s" % (basename, vid, self.options.service)
+        if len(directory):
+            output = os.path.join(directory, title)
+        else:
+            output = title
+        return output
 
     def _autoname(self, dataj):
         program = dataj[self.json_keys["FORMAT_SLUG"]]
