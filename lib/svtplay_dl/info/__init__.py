@@ -21,30 +21,30 @@ class info(object):
     def raw_txt(self, data): 
         text = ''
         if "show" in data:
-            text += "Show: %s" % (data['show'])
+            text += "Show: %s\n" % (data['show'])
         if "title" in data:  
-            text += "\nTitle: %s" % data['title']
+            text += "Title: %s\n" % data['title']
         if "broadcastDate" in data:
-            text+= "\nBroadcast Date: %s" % data["broadcastDate"]
+            text+= "Broadcast Date: %s\n" % data["broadcastDate"]
         if "publishDate" in data:
-            text+= "\nPublishDate Date: %s" % data['publishDate']
+            text+= "PublishDate Date: %s\n" % data['publishDate']
         if "duration" in data:
-            text+= "\nDuration: %s min" % data['duration']
+            text+= "Duration: %s \n" % data['duration']
         if "season" in data:
-            text+= "\nSeason: %s" % data['season']
+            text+= "Season: %s\n" % data['season']
         if "episode" in data:
-            text+= "\nEpisode: %s" % data['episode']
+            text+= "Episode: %s\n" % data['episode']
         if "type" in data:
-            text+="\nType: %s" % data['type']
+            text+="Type: %s\n" % data['type']
             
         if "audiodescription" in data:
-            text+="Audiodescription: True"
+            text+="Audiodescription: True\n"
         if "signInterpretation" in data:
-            text+="Sign Interpretation: True"
+            text+="Sign Interpretation: True\n"
         if "subtitle" in data:
-            text+="\nSubtitled: True"
+            text+="Subtitled: True\n"
         if "description" in data:
-            text+= "\nDescription: " + data["description"]
+            text+= "Description: " + data["description"]
         return text
     
     def save_file(self, data, subtype):
