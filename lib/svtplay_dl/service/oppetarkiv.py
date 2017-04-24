@@ -14,6 +14,7 @@ from svtplay_dl.fetcher.dash import dashparse
 from svtplay_dl.utils import ensure_unicode, filenamify, is_py2, decode_html_entities
 from svtplay_dl.subtitle import subtitle
 from svtplay_dl.utils.urllib import urlparse, parse_qs
+from svtplay_dl.info import info
 
 
 class OppetArkiv(Service, OpenGraphThumbMixin):
@@ -42,6 +43,15 @@ class OppetArkiv(Service, OpenGraphThumbMixin):
         if self.exclude():
             yield ServiceError("Excluding video")
             return
+            
+        parsed_info = self._parse_info(data)
+        
+        if self.options.get_info:
+            if parsed_info:
+                yield info(copy.copy(self.options), parsed_info)
+                log.info("Collected info")
+            else: 
+                log.info("Couldn't collect info for this episode")
         if "subtitleReferences" in data:
             for i in data["subtitleReferences"]:
                 if i["format"] == "websrt":
@@ -185,3 +195,48 @@ class OppetArkiv(Service, OpenGraphThumbMixin):
             else:
                 title = data
         return title
+        
+    def _parse_info(self,json_data):
+        
+        
+        parsed_info = {}
+        data = self.get_urldata()
+        datatitle = re.search('data-title="([^"]+)"', self.get_urldata())
+        if not datatitle:
+            return None
+        datat = decode_html_entities(datatitle.group(1))
+        
+        parsed_info["title"] = self.name(datat)
+        
+        match = re.search("S.song (\d+) - Avsnitt (\d+)", datat)
+        if match:
+            parsed_info["season"] = match.group(1)
+            parsed_info["episode"] = match.group(2)
+        else:
+            match = re.search("Avsnitt (\d+)", datat)
+            if match:
+                  parsed_info["episode"] = match.group(1)
+                  
+        meta = re.search("<span class=\"svt-video-meta\">([\w\W]+)<\/span>",data)
+        if meta:
+            broadcast_date = re.search("<time .+>(.+)</time>",meta.group(1))
+            duration = re.search("Längd <strong>(.+)<\/strong>",meta.group(1))
+            if duration:
+                parsed_info["duration"] = duration.group(1)
+            if broadcast_date:
+                parsed_info["broadcastDate"] = broadcast_date.group(1)
+        if "subtitleReferences" in json_data:
+             for i in json_data["subtitleReferences"]:
+                if i["format"] == "websrt":
+                    parsed_info["subtitle"] = "True"
+                    break
+            
+        description = re.search("<div class=\"svt-text-bread\">([\w\W]+?)<\/div>",data)
+        if description:
+            description = decode_html_entities(description.group(1))
+            description = description.replace("<br />","\n").replace("<br>","\n").replace("\t","")
+            description = re.sub('<[^<]+?>', '', description)
+            parsed_info["description"] = description
+        
+        
+        return parsed_info
