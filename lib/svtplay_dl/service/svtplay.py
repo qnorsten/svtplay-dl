@@ -62,6 +62,7 @@ class Svtplay(Service, OpenGraphThumbMixin):
         "CLIPS":"clips",
         "RELATEDVIDEOSTABS":"relatedVideosTabs",
         "DESCRIPTION":"description",
+        "MATERIALLENGTH":"materialLength",
     }
      
     def get(self):
@@ -113,7 +114,6 @@ class Svtplay(Service, OpenGraphThumbMixin):
             return
         
         if self.options.get_info:
-            
             if parsed_info:
                 yield info(copy.copy(self.options), parsed_info)
                 log.info("Collected info")
@@ -208,7 +208,8 @@ class Svtplay(Service, OpenGraphThumbMixin):
             data['broadcastDate']= janson[self.json_keys["BROADCASTDATE"]]
         if self.json_keys["PUBLISHDATE"] in janson:
             data['publishDate'] = janson[self.json_keys["PUBLISHDATE"]]
-        data[self.json_keys["DURATION"]] = ceil(janson["materialLength"]/60)
+        if self.json_keys["MATERIALLENGTH"] in janson:
+            data["duration"] = str(ceil(janson[self.json_keys["MATERIALLENGTH"]]/60)) + " min" 
         if self.json_keys["EPISODIC"] in janson:
             data['season'] = janson[self.json_keys["SEASON"]]
             data['episode'] = janson[self.json_keys["EPISODENUMBER"]]
