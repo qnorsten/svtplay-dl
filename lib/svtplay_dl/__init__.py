@@ -155,6 +155,8 @@ class Options(object):
         self.stream_prio = None
         self.remux = False
         self.silent_semi = False
+        self.get_info = False
+        self.include_clips = False
 
 def get_multiple_media(urls, options):
     if options.output and os.path.isfile(options.output):
