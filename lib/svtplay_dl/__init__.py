@@ -168,7 +168,8 @@ class Options(object):
         self.ssl_verify = True
         self.http_headers = None
         self.stream_prio = None
-        self.remux = False
+        self.remux_mp4 = False
+        self.remux_mkv = False
         self.silent_semi = False
         self.proxy = None
         self.hls_time_stamp = False
