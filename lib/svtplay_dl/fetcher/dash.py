@@ -11,7 +11,7 @@ from svtplay_dl.output import progress_stream, output, ETA, progressbar
 from svtplay_dl.utils.urllib import urljoin
 from svtplay_dl.error import UIException, ServiceError
 from svtplay_dl.fetcher import VideoRetriever
-
+from svtplay_dl.subtitle import subtitle
 
 class DASHException(UIException):
     def __init__(self, url, message):
@@ -166,6 +166,13 @@ def dashparse(options, res, url):
     audiofiles = adaptionset(temp, url, baseurl, offset_sec, duration_sec)
     temp = xml.findall('.//{urn:mpeg:dash:schema:mpd:2011}AdaptationSet[@mimeType="video/mp4"]')
     videofiles = adaptionset(temp, url, baseurl, offset_sec, duration_sec)
+    subtitle_adaptionsets = xml.findall('.//{urn:mpeg:dash:schema:mpd:2011}AdaptationSet[@mimeType="text/vtt"]')
+
+    if subtitle_adaptionsets:
+        for nr, subtitle_adaptionset in enumerate(subtitle_adaptionsets):
+            subtitle_url = _get_adaption_set_base_url(subtitle_adaptionset, url, baseurl)
+            if subtitle_url:
+                streams[nr] = subtitle(copy.copy(options), "wrst", subtitle_url)
 
     if not audiofiles or not videofiles:
         streams[0] = ServiceError("Found no Audiofiles or Videofiles to download.")
@@ -181,6 +188,19 @@ def dashparse(options, res, url):
 
     return streams
 
+def _get_adaption_set_base_url(element, url, baseurl=None):
+    # todo improve this for other cases such as segmented subtitle stream - only tested with dplay for now
+    dirname = os.path.dirname(url) + "/"
+    if baseurl:
+        dirname = urljoin(dirname, baseurl)
+    representation = element.findall(".//{urn:mpeg:dash:schema:mpd:2011}Representation")
+
+    for i in representation:
+        filename = dirname
+        if i.find("{urn:mpeg:dash:schema:mpd:2011}BaseURL") is not None:
+            filename = urljoin(filename, i.find("{urn:mpeg:dash:schema:mpd:2011}BaseURL").text)
+            return filename
+    return None
 
 class DASH(VideoRetriever):
     def name(self):
