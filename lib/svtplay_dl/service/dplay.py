@@ -8,6 +8,7 @@ import random
 
 from svtplay_dl.service import Service
 from svtplay_dl.fetcher.hls import hlsparse
+from svtplay_dl.fetcher.dash import dashparse
 from svtplay_dl.subtitle import subtitle
 from svtplay_dl.utils.urllib import urlparse
 from svtplay_dl.error import ServiceError
@@ -92,11 +93,17 @@ class Dplay(Service):
         if res.status_code > 400:
             yield ServiceError("You dont have permission to watch this")
             return
+
         streams = hlsparse(self.options, self.http.request("get", res.json()["data"]["attributes"]["streaming"]["hls"]["url"]),
                            res.json()["data"]["attributes"]["streaming"]["hls"]["url"], httpobject=self.http)
+        # dplay dash streams are encrypted and protected by clear key - should be decryptable with mp4decrypt, if hls ever stop working
+        # streams.update(dashparse(self.options, self.http.request("get", res.json()["data"]["attributes"]["streaming"]["dash"]["url"]),
+        #                          res.json()["data"]["attributes"]["streaming"]["dash"]["url"]))
+
         if streams:
             for n in list(streams.keys()):
                 yield streams[n]
+
 
     def _autoname(self, jsondata):
         match = re.search('^([^/]+)/', jsondata["data"]["attributes"]["path"])
