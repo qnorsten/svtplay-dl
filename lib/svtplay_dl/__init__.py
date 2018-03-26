@@ -300,7 +300,19 @@ def get_one_media(stream, options):
     def options_subs_dl(subfixes):
         if subs:
             if options.get_all_subtitles:
+                # filter out duplicates of same subtitles with same filename and subfix
+                # (should only happen if you get same subtitle from multiple sources
+                #  e.g service api, dash manifest, hls m3u8 file
+                # TODO figure out a prettier/better way to accomplish this there must be one
+                deduped_subs = []
                 for sub in subs:
+                    for s in deduped_subs:
+                        if sub.options.output == s.options.output and sub.subfix == s.subfix:
+                            break
+                    else:
+                        deduped_subs.append(sub)
+
+                for sub in deduped_subs:
                     sub.download()
                     if options.merge_subtitle:
                         if sub.subfix:
