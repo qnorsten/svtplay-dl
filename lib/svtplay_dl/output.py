@@ -188,7 +188,7 @@ def findexpisode(directory, service, name):
                 if extension in subtitlefiles:
                     if name.find(service) and match.group(1) == videoid and match.group(2) == extension:
                         return True
-                elif match.group(2) not in subtitlefiles and match.group(2) != "m4a":
+                elif match.group(2) not in subtitlefiles and match.group(2) != "m4a" and match.group((2) != 'mkv'):
                     if name.find(service) and match.group(1) == videoid:
                         return True
 
