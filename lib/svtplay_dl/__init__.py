@@ -362,14 +362,22 @@ def get_one_media(stream, options):
             else:
                 log.warning("Can not get thumbnail when fetching to stdout")
         post = postprocess(stream, options, subfixes)
+        # todo replace this for mkv
+        # todo check for detecting mkvmerge and or ffmpeg
+        if stream.name() == "dash" or (stream.name() == "hls" and stream.options.segments) and post.detect_ffmpeg: #is ffmpeg really needed here, or can we just use mkvmerge? probably better to just require ffmpeg/avconv
+            if options.remux_mkv:
+                post.merge_mkv()
+            else:
+                post.merge_mp4()
 
-        if stream.name() == "dash" or (stream.name() == "hls" and stream.options.segments) and post.detect:
-            post.merge()
-        elif (stream.name() == "dash" or (stream.name() == "hls" and stream.options.segments)) and not post.detect and stream.finished:
+        elif (stream.name() == "dash" or (stream.name() == "hls" and stream.options.segments)) and not post.detect_ffmpeg and stream.finished:
             log.warning("Cant find ffmpeg/avconv. audio and video is in seperate files. if you dont want this use -P hls or hds")
-        elif stream.name() == "hls" or options.remux:
-            if post.detect:
-                post.remux()
+        elif stream.name() == "hls" or options.remux_mp4 or options.remux_mkv:
+            if post.detect_ffmpeg:
+                if options.remux_mp4:
+                    post.remux_mp4()
+                elif options.remux_mkv:
+                    post.remux_mkv()
             else:
                 log.warning("Cant find ffmpeg/avconv. File may be unplayable.")
 
@@ -435,7 +443,7 @@ def main():
                       help="download subtitle from the site if available")
     parser.add_option("-M", "--merge-subtitle", action="store_true", dest="merge_subtitle",
                       default=False, help="merge subtitle with video/audio file with corresponding ISO639-3 language code."
-                                          "this invokes --remux automatically. use with -S for external also.")
+                                          "this invokes --remux-mp4 automatically (unless --remux-mkv explicity specified). use with -S for external also.")
     parser.add_option("--force-subtitle", dest="force_subtitle", default=False,
                       action="store_true", help="download only subtitle if its used with -S")
     parser.add_option("--require-subtitle", dest="require_subtitle", default=False,
@@ -471,8 +479,12 @@ def main():
                       help="A header to add to each HTTP request.")
     parser.add_option("--stream-priority", dest="stream_prio", default=None, metavar="dash,hls,hds,http,rtmp",
                       help="If two streams have the same quality, choose the one you prefer")
-    parser.add_option("--remux", dest="remux", default=False, action="store_true",
-                      help="Remux from one container to mp4 using ffmpeg or avconv")
+    # TODO add option group here - start here
+    parser.add_option("--remux-mp4", dest="remux_mp4", default=False, action="store_true",
+                      help="Remux from one container to mp4 using either ffmpeg or avconv")
+    parser.add_option("--remux-mkv", dest="remux_mkv", default=False, action="store_true",
+                      help="Remux from one container to mkv using either mkvmerge, ffmpeg or avconv")
+    # end option group
     parser.add_option("--include-clips", dest="include_clips", default=False, action="store_true",
                       help="include clips from websites when using -A")
     parser.add_option("--cmore-operatorlist", dest="cmoreoperatorlist", default=False, action="store_true",
@@ -497,7 +509,8 @@ def main():
         else:
             options.subtitle = True
     if options.merge_subtitle:
-        options.remux = True
+        if not options.remux_mkv:
+            options.remux_mp4 = True # unless --remux-mkv is specified explicity default to --remux-mp4 - Default should be configable in config file later
     options = mergeParserOption(Options(), options)
     if options.silent_semi:
         options.silent = True
@@ -555,7 +568,8 @@ def mergeParserOption(options, parser):
     options.ssl_verify = parser.ssl_verify
     options.http_headers = parser.http_headers
     options.stream_prio = parser.stream_prio
-    options.remux = parser.remux
+    options.remux_mp4 = parser.remux_mp4
+    options.remux_mkv = parser.remux_mkv
     options.get_all_subtitles = parser.get_all_subtitles
     options.get_raw_subtitles = parser.get_raw_subtitles
     options.convert_subtitle_colors = parser.convert_subtitle_colors
