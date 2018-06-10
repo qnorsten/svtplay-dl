@@ -129,7 +129,10 @@ def filename(stream):
 
 
 def formatname(output, config, extension="mp4"):
-    name = _formatname(output, config, extension)
+    if output:
+        name = _formatname(output, config, extension)
+    else:
+        name = ''
     if config.get("output") and os.path.isdir(os.path.expanduser(config.get("output"))):
         name = os.path.join(config.get("output"), name)
     elif config.get("path") and os.path.isdir(os.path.expanduser(config.get("path"))):
