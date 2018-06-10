@@ -144,6 +144,7 @@ def parser(version):
 def setup_defaults():
     options = Options()
     options.set("output", None)
+    options.set("output_format", 'mp4')
     options.set("configfile", CONFIGFILE)
     options.set("resume", False)
     options.set("live", False)
