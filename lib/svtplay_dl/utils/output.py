@@ -175,11 +175,15 @@ def output(output, config, extension="mp4", mode="wb", **kwargs):
     subtitlefiles = ["srt", "smi", "tt", "sami", "wrst"]
 
     name = formatname(output, config, extension)
+    dirname = os.path.dirname(name)
+    if not os.path.isdir(dirname):
+        _create_output_folder(dirname)
 
     logging.info("Outfile: %s", name)
     if os.path.isfile(name):
         logging.warning("File ({}) already exists. Use --force to overwrite".format(name))
         return None
+
     if findexpisode(output, os.path.dirname(os.path.realpath(name)), os.path.basename(name), config.get("filename")):
         if extension in subtitlefiles:
             if not config.get("force_subtitle"):
@@ -227,3 +231,12 @@ def findexpisode(output, directory, name, filename_format):
                             return False
                         return True
     return False
+
+
+def _create_output_folder(name):
+    if name and not os.path.exists(name):
+        try:
+            os.makedirs(name)
+        except OSError as e:
+            log.error("%s: %s", e.strerror, e.filename)
+            return

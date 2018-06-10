@@ -14,18 +14,15 @@ from svtplay_dl.postprocess import postprocess
 from svtplay_dl.utils.stream import select_quality, list_quality
 from svtplay_dl.utils.text import exclude
 from svtplay_dl.error import UIException
+from svtplay_dl.utils.output import _create_output_folder
 
 
 def get_multiple_media(urls, options):
     if options.output and os.path.isfile(options.output):
         log.error("Output must be a directory if used with multiple URLs")
         sys.exit(2)
-    elif options.output and not os.path.exists(options.output):
-        try:
-            os.makedirs(options.output)
-        except OSError as e:
-            log.error("%s: %s", e.strerror, e.filename)
-            return
+
+    _create_output_folder(options.output)
 
     for url in urls:
         get_media(url, copy.copy(options))
@@ -61,12 +58,7 @@ def get_all_episodes(stream, url):
     if name and os.path.isfile(name):
         log.error("Output must be a directory if used with --all-episodes")
         sys.exit(2)
-    elif name and not os.path.exists(name):
-        try:
-            os.makedirs(name)
-        except OSError as e:
-            log.error("%s: %s", e.strerror, e.filename)
-            return
+    _create_output_folder(name)
 
     episodes = stream.find_all_episodes(stream.config)
     if episodes is None:
@@ -176,6 +168,7 @@ def get_one_media(stream):
                 return
             log.info("Selected to download %s, bitrate: %s",
                      stream.name, stream.bitrate)
+
             stream.download()
         except UIException as e:
             if stream.config.get("verbose"):
