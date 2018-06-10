@@ -67,13 +67,14 @@ def hlsparse(config, res, url, **kwargs):
             audio_url = None
             if i["TAG"] == "EXT-X-MEDIA":
                 if "AUTOSELECT" in i and (i["AUTOSELECT"].upper() == "YES"):
-                    if i["TYPE"] and i["TYPE"] != "SUBTITLES":
+                    if i["TYPE"]:
                         if "URI" in i:
-                            if segments is None:
-                                segments = True
                             if i["GROUP-ID"] not in media:
                                 media[i["GROUP-ID"]] = []
                             media[i["GROUP-ID"]].append(i["URI"])
+                            if i["TYPE"] != "SUBTITLES":  # perhaps better to check if i["TYPE"] == "AUDIO": ?
+                                if segments is None:
+                                    segments = True
                         else:
                             segments = False
                 if i["TYPE"] == "SUBTITLES":
