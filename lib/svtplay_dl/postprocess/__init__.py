@@ -132,6 +132,7 @@ class postprocess(object):
             return
 
         self.mkv = True
+        langs = []
         orig_filename = formatname(self.stream.output, self.config, self.stream.output_extention)
         name, ext = os.path.splitext(orig_filename)
         new_name = orig_filename
@@ -196,6 +197,7 @@ class postprocess(object):
         if self.stream.finished is False:
             return
         self.mkv = True
+        langs = []
 
         orig_filename = formatname(self.stream.output, self.config, self.stream.output_extention)
         name, ext = os.path.splitext(orig_filename)
@@ -252,6 +254,8 @@ class postprocess(object):
             return
         if self.stream.finished is False:
             return
+
+        langs = []
 
         orig_filename = formatname(self.stream.output, self.config, self.stream.output_extention)
         name, ext = os.path.splitext(orig_filename)
@@ -314,6 +318,7 @@ class postprocess(object):
             return
 
         self.mkv = True
+        langs = []
 
         orig_filename = formatname(self.stream.output, self.config, self.stream.output_extention)
         name, ext = os.path.splitext(orig_filename)
@@ -376,6 +381,8 @@ class postprocess(object):
         if self.stream.finished is False:
             return
 
+        langs = []
+
         orig_filename = formatname(self.stream.output, self.config, self.stream.output_extention)
         name, ext = os.path.splitext(orig_filename)
         new_filename = orig_filename
@@ -434,6 +441,8 @@ class postprocess(object):
             return
         if self.stream.finished is False:
             return
+
+        langs = []
 
         orig_filename = formatname(self.stream.output, self.config, self.stream.output_extention)
         name, ext = os.path.splitext(orig_filename)
